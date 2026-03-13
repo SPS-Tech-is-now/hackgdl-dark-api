@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exploit the Invisible — HackGDL 2026</title>
+
+  <!-- SEO -->
+  <meta name="description" content="Demostración en vivo de por qué las Dark APIs rompen el playbook ofensivo. Zero Trust Network Access, OWASP API Top 10 y OpenZiti / NetFoundry — HackGDL 2026." />
+  <meta name="author" content="HackGDL 2026" />
+  <meta name="keywords" content="Dark API, Zero Trust, ZTNA, OpenZiti, NetFoundry, OWASP API Top 10, seguridad, HackGDL, pentesting" />
+  <meta name="robots" content="index, follow" />
+
+  <!-- Open Graph (Facebook, LinkedIn, WhatsApp, Telegram…) -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="Exploit the Invisible — HackGDL 2026" />
+  <meta property="og:description" content="Demostración en vivo: cómo las Dark APIs eliminan la superficie de ataque y rompen el playbook ofensivo. Zero Trust · OWASP API Top 10 · OpenZiti." />
+  <meta property="og:url"         content="https://github.com/SPS-Tech-is-now/hackgdl-dark-api-private" />
+  <meta property="og:image"       content="https://github.com/SPS-Tech-is-now/hackgdl-dark-api-private/slides/og-cover.png" />
+  <meta property="og:image:width"  content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt"   content="Exploit the Invisible — HackGDL 2026" />
+  <meta property="og:locale"      content="es_MX" />
+  <meta property="og:site_name"   content="HackGDL 2026" />
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:title"       content="Exploit the Invisible — HackGDL 2026" />
+  <meta name="twitter:description" content="Dark APIs · Zero Trust · OWASP API Top 10 · OpenZiti. Demo en vivo — HackGDL 2026." />
+  <meta name="twitter:image"       content="https://github.com/SPS-Tech-is-now/hackgdl-dark-api-private/slides/og-cover.png" />
+  <meta name="twitter:image:alt"   content="Exploit the Invisible — HackGDL 2026" />
+  <meta name="twitter:site"        content="@HackGDL" />
+
+  <!-- Reveal.js CDN -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css" />
+  <!-- Syntax highlighting -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/monokai.css" />
+
+  <style>
+    /* ── Brand / Color Palette ─────────────────────────────── */
+    :root {
+      --neon-green:  #00ff41;
+      --neon-red:    #ff0033;
+      --neon-cyan:   #00d4ff;
+      --neon-yellow: #ffcc00;
+      --dark-bg:     #0a0a0a;
+      --panel-bg:    #111418;
+      --border:      #1e2832;
+    }
+
+    .reveal { font-family: 'Courier New', Courier, monospace; }
+    .reveal .slides { text-align: left; }
+
+    /* ── Title Slide ────────────────────────────────────────── */
+    .title-slide { text-align: center; }
+    .title-slide h1 {
+      font-size: 1.6em;
+      color: var(--neon-green);
+      text-shadow: 0 0 20px var(--neon-green);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      line-height: 1.3;
+    }
+    .title-slide h2 { color: #888; font-size: 0.9em; font-weight: normal; margin-top: 0.5em; }
+    .title-slide .subtitle { color: var(--neon-cyan); font-size: 0.8em; margin-top: 1em; }
+    .title-slide .event-badge {
+      display: inline-block;
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+      padding: 0.2em 0.8em;
+      font-size: 0.6em;
+      letter-spacing: 3px;
+      margin-bottom: 1em;
+      text-transform: uppercase;
+    }
+
+    /* ── Terminal Block ─────────────────────────────────────── */
+    .terminal {
+      background: #000;
+      border: 1px solid var(--neon-green);
+      border-radius: 4px;
+      padding: 0.6em 0.9em;
+      font-family: 'Courier New', monospace;
+      font-size: 0.53em;
+      line-height: 1.5;
+      color: var(--neon-green);
+      box-shadow: 0 0 20px rgba(0,255,65,0.15);
+      margin: 0.3em 0;
+      text-align: left;
+    }
+    .terminal.red  { border-color: var(--neon-red);  box-shadow: 0 0 20px rgba(255,0,51,0.15); }
+    .terminal.cyan { border-color: var(--neon-cyan); box-shadow: 0 0 20px rgba(0,212,255,0.15); }
+    .terminal .prompt { color: var(--neon-cyan); }
+    .terminal .cmd    { color: #fff; }
+    .terminal .output { color: #aaa; }
+    .terminal .success{ color: var(--neon-green); }
+    .terminal .error  { color: var(--neon-red); }
+    .terminal .warn   { color: var(--neon-yellow); }
+    .terminal-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 0.5em;
+      padding-bottom: 0.3em;
+      border-bottom: 1px solid #222;
+    }
+    .terminal-header::before {
+      content: ''; flex-shrink: 0;
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #ff5f56;
+      box-shadow: 14px 0 #ffbd2e, 28px 0 #27c93f;
+      margin-right: 28px;
+    }
+    .term-title { color: #888; font-size: 0.9em; margin-left: auto; }
+
+    /* ── Section headers ────────────────────────────────────── */
+    .section-tag {
+      color: var(--neon-cyan);
+      font-size: 0.5em;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 0.1em;
+    }
+    .section-tag.red   { color: var(--neon-red); }
+    .section-tag.green { color: var(--neon-green); }
+    h2.slide-title {
+      color: #fff;
+      font-size: 1em;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 0.2em;
+      margin-bottom: 0.4em;
+    }
+    h2.slide-title span         { color: var(--neon-green); }
+    h2.slide-title.red          { border-color: var(--neon-red); }
+    h2.slide-title.red span     { color: var(--neon-red); }
+    h2.slide-title.green        { border-color: var(--neon-green); }
+
+    /* ── Columns ────────────────────────────────────────────── */
+    .cols { display: grid; gap: 1em; }
+    .cols-2 { grid-template-columns: 1fr 1fr; }
+    .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    /* fix: grid items no deben desbordarse más allá de su celda */
+    .cols > * { min-width: 0; overflow: hidden; }
+    .cols-3 > div { text-align: center; }
+
+    /* ── Cards ──────────────────────────────────────────────── */
+    .card {
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.55em 0.8em;
+    }
+    .card.danger  { border-color: var(--neon-red);    box-shadow: 0 0 8px rgba(255,0,51,0.2); }
+    .card.success { border-color: var(--neon-green);  box-shadow: 0 0 8px rgba(0,255,65,0.2); }
+    .card.info    { border-color: var(--neon-cyan);   box-shadow: 0 0 8px rgba(0,212,255,0.2); }
+    .card.warn    { border-color: var(--neon-yellow); box-shadow: 0 0 8px rgba(255,204,0,0.2); }
+    .card h3 { font-size: 0.62em; margin: 0 0 0.35em; text-transform: uppercase; letter-spacing: 2px; }
+    .card.danger  h3 { color: var(--neon-red); }
+    .card.success h3 { color: var(--neon-green); }
+    .card.info    h3 { color: var(--neon-cyan); }
+    .card ul { margin: 0; padding-left: 1em; font-size: 0.58em; color: #bbb; line-height: 1.45; }
+    .r-stretch .card { display: flex; flex-direction: column; justify-content: center; }
+    .tk-num   { font-size: 0.55em; letter-spacing: 2px; margin-bottom: 0.4em; }
+    .tk-title { font-size: 0.75em; color: #fff; font-weight: bold; margin-bottom: 0.4em; font-family: 'Courier New', monospace; }
+    .tk-desc  { font-size: 0.6em;  color: #999; }
+
+    /* ── Attack Result Pill ─────────────────────────────────── */
+    .result-pill {
+      display: inline-block;
+      padding: 0.15em 0.6em;
+      border-radius: 3px;
+      font-size: 0.55em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      vertical-align: middle;
+    }
+    .result-pill.vuln { background: var(--neon-red); color: #000; }
+    .result-pill.safe { background: var(--neon-green); color: #000; }
+    .result-pill.partial { background: var(--neon-yellow); color: #000; }
+
+    /* ── Comparison Table ───────────────────────────────────── */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.6em;
+      margin-top: 0.5em;
+    }
+    .compare-table th {
+      background: #111;
+      color: var(--neon-cyan);
+      text-align: left;
+      padding: 0.5em 0.8em;
+      border-bottom: 1px solid var(--border);
+      letter-spacing: 2px;
+      font-size: 0.9em;
+    }
+    .compare-table td {
+      padding: 0.5em 0.8em;
+      border-bottom: 1px solid #1a1a1a;
+      color: #ccc;
+    }
+    .compare-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .compare-table .vuln { color: var(--neon-red); font-weight: bold; }
+    .compare-table .safe { color: var(--neon-green); font-weight: bold; }
+    .compare-table .tech { color: #fff; }
+
+    /* ── Big numbers ────────────────────────────────────────── */
+    .stat-big {
+      font-size: 2.5em;
+      font-weight: bold;
+      color: var(--neon-red);
+      text-shadow: 0 0 15px rgba(255,0,51,0.5);
+      line-height: 1;
+    }
+    .stat-label { font-size: 0.55em; color: #999; margin-top: 0.3em; }
+
+    /* ── ZT Diagram ─────────────────────────────────────────── */
+    /* ── OWASP Badge ────────────────────────────────────────── */
+    .owasp-badge {
+      display: inline-block;
+      background: var(--neon-red);
+      color: #000;
+      font-weight: bold;
+      font-size: 0.5em;
+      padding: 0.2em 0.5em;
+      border-radius: 3px;
+      letter-spacing: 1px;
+      margin-right: 0.3em;
+    }
+
+    /* ── Footer ─────────────────────────────────────────────── */
+    .reveal .footer-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.45em;
+      color: #666;
+      letter-spacing: 1px;
+      z-index: 100;
+      background: rgba(10, 10, 10, 0.92);
+      border-top: 1px solid #1a1a1a;
+      padding: 0.55em 7em 0.55em 2em; /* padding-right amplio para no tapar las flechas de nav */
+    }
+    .reveal .footer-bar .right { color: var(--neon-green); opacity: 0.6; }
+    .sps-ref { color: var(--neon-cyan); opacity: 0.5; }
+    /* SPS watermark — fixed, muy sutil */
+    .sps-wm {
+      position: fixed; bottom: 2.6em; right: 1.4em;
+      opacity: 0.12; z-index: 50; user-select: none;
+      display: block; line-height: 0;
+    }
+    .sps-wm img { width: 72px; filter: brightness(0) invert(1); }
+    /* SPS logo — top-right, todas las slides */
+    .sps-logo-tr {
+      position: fixed; top: 0.7em; right: 1.2em;
+      z-index: 1000; line-height: 0; opacity: 0.85;
+    }
+    .sps-logo-tr img { height: 28px; filter: invert(1); }
+
+    /* ── Blinking cursor ────────────────────────────────────── */
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cursor { animation: blink 1s step-end infinite; }
+
+    /* ── Neon text ──────────────────────────────────────────── */
+    .neon-g { color: var(--neon-green); text-shadow: 0 0 8px var(--neon-green); }
+    .neon-r { color: var(--neon-red);   text-shadow: 0 0 8px var(--neon-red); }
+    .neon-c { color: var(--neon-cyan);  text-shadow: 0 0 8px var(--neon-cyan); }
+    .neon-y { color: var(--neon-yellow); text-shadow: 0 0 8px rgba(255,204,0,0.6); }
+
+    /* ── Key point highlight ────────────────────────────────── */
+    .key-point {
+      background: linear-gradient(90deg, rgba(0,255,65,0.1), transparent);
+      border-left: 3px solid var(--neon-green);
+      padding: 0.3em 0.7em;
+      margin: 0.3em 0;
+      font-size: 0.62em;
+      color: #ddd;
+    }
+    .key-point.red {
+      background: linear-gradient(90deg, rgba(255,0,51,0.08), transparent);
+      border-color: var(--neon-red);
+    }
+    .slide-note { font-size: 0.55em; color: #555; margin-top: 0.8em; }
+
+    /* Reveal overrides */
+    .reveal h1, .reveal h2, .reveal h3 { text-transform: none; }
+    .reveal section { padding: 0.35em 0.7em 2em; box-sizing: border-box; overflow: visible; }
+    .reveal pre { box-shadow: none; margin: 0.2em 0; width: 100%; }
+    .reveal pre code { font-size: 0.7em; line-height: 1.5; max-height: 220px; }
+    .reveal ul { margin: 0.15em 0; }
+    .reveal ul li { margin: 0.1em 0; font-size: 0.72em; color: #ccc; }
+
+    /* fix: ocultar flechas de navegación de Reveal.js que se enciman con el footer */
+    .reveal .controls { display: none !important; }
+
+    /* ── Responsive scaling ─────────────────────────────────── */
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; overflow: hidden; }
+
+    /* ── Keyframes ───────────────────────────────────────────── */
+    @keyframes termGlow {
+      0%, 100% { opacity: 0.75; }
+      50%       { opacity: 1;    }
+    }
+    @keyframes termFlicker {
+      0%   { opacity: 0;    }
+      10%  { opacity: 0.85; }
+      18%  { opacity: 0.08; }
+      30%  { opacity: 0.9;  }
+      42%  { opacity: 0.2;  }
+      55%  { opacity: 1;    }
+      100% { opacity: 1;    }
+    }
+    @keyframes typeReveal {
+      from { clip-path: inset(0 100% 0 0); }
+      to   { clip-path: inset(0 0%   0 0); }
+    }
+    @keyframes contentIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* ─── Glow / flicker: solo en slide activo ───────────────── */
+    .reveal section.present .term-glow   { animation: termGlow    2.8s 0.0s ease-in-out infinite; }
+    .reveal section.present .term-glow-b { animation: termGlow    2.8s 0.9s ease-in-out infinite; }
+    .reveal section.present .term-glow-c { animation: termGlow    2.8s 1.8s ease-in-out infinite; }
+    .reveal section.present .term-glow-d { animation: termGlow    2.8s 2.7s ease-in-out infinite; }
+    .reveal section.present .term-flicker{ animation: termFlicker 0.7s       ease-out both; }
+
+    /* ─── Title slide: clases manuales con delay ─────────────── */
+    .reveal section.present .type-in    { animation: typeReveal 0.38s        steps(18, end) both; }
+    .reveal section.present .type-in-d1 { animation: typeReveal 0.38s 0.40s steps(18, end) both; }
+    .reveal section.present .type-in-d2 { animation: typeReveal 0.38s 0.80s steps(18, end) both; }
+    .reveal section.present .type-in-d3 { animation: typeReveal 0.38s 1.20s steps(18, end) both; }
+    .reveal section.present .type-in-d4 { animation: typeReveal 0.38s 1.60s steps(18, end) both; }
+
+    /* ─── FASE 1 (0.00s): section-tag ────────────────────────── */
+    .reveal section.present .section-tag   { animation: typeReveal 0.25s        steps(14, end) both; }
+    /* ─── FASE 2 (0.18s): título ──────────────────────────────── */
+    .reveal section.present h2.slide-title { animation: typeReveal 0.35s 0.18s  steps(20, end) both; }
+    /* ─── FASE 3 (0.50s): bloques de cuerpo ───────────────────── */
+    .reveal section.present .terminal,
+    .reveal section.present .cols,
+    .reveal section.present .compare-table,
+    .reveal section.present .key-point,
+    .reveal section.present .r-stretch,
+    .reveal section.present > svg          { animation: contentIn  0.20s 0.50s  both; }
+    /* ─── FASE 4a (0.55s): cmd escribe antes que el output ─────── */
+    .reveal section.present .terminal .cmd { animation: typeReveal 0.38s 0.55s  steps(18, end) both; }
+    .reveal section.present .stat-big      { animation: typeReveal 0.28s 0.56s  steps(8,  end) both; }
+    .reveal section.present .result-pill   { animation: typeReveal 0.20s 0.58s  steps(5,  end) both; }
+    /* output/success/error/warn: visible con el terminal (sin delay extra) */
+  </style>
+</head>
+<body>
+<div class="reveal">
+
+  <!-- ── FOOTER ─────────────────────────────────────────────── -->
+  <div class="footer-bar">
+    <span>
+      <a href="https://hackgdl.com" target="_blank" style="color:inherit;text-decoration:none;">@HackGDL 2026</a>
+      &nbsp;<a href="https://spsolutions.com.mx" target="_blank" class="sps-ref" style="text-decoration:none;">· SPS</a>
+    </span>
+    <span class="right">Exploit the Invisible &nbsp;|&nbsp; OpenZiti / NetFoundry &nbsp;|&nbsp; Tech is Now</span>
+  </div>
+  <a href="https://spsolutions.com.mx" target="_blank" class="sps-wm">
+    <img src="https://developers.spsolutions.com.mx/images/Logos/Logo-sps-text.webp" alt="SPS"/>
+  </a>
+  <a href="https://spsolutions.com.mx" target="_blank" class="sps-logo-tr">
+    <img src="https://developers.spsolutions.com.mx/images/Logos/Logo-sps-text.webp" alt="SPS"/>
+  </a>
+
+  <div class="slides">
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 1: TITLE                                         -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section class="title-slide" data-background-color="#0a0a0a">
+      <a href="https://hackgdl.com" target="_blank" class="event-badge type-in" style="text-decoration:none;">HackGDL 2026</a>
+      <h1 class="type-in-d1">Exploit the Invisible<span class="cursor neon-g">_</span></h1>
+      <h2>Demostrando Por Qué las <span style="color:var(--neon-red)">Dark APIs</span><br/>Rompen el Playbook Ofensivo</h2>
+      <div class="subtitle type-in-d2">
+        Zero Trust Network Access &nbsp;<br/>&nbsp; OWASP API Top 10 &nbsp;<br/>&nbsp; OpenZiti / NetFoundry
+      </div>
+      <br/>
+      <div style="font-size:0.5em; margin-top:1em; display:inline-block; text-align:left;">
+        <span style="color:#555">$</span> <span style="color:#888">whoami</span><br/>
+        <span class="type-in-d1" style="display:block; color:#555">  name    <span style="color:#ccc">Rolando Carrasco</span></span>
+        <span class="type-in-d2" style="display:block; color:#555">  role    <span style="color:#888">Security Engineer &nbsp;·&nbsp; API Architect &nbsp;·&nbsp; CTO</span></span>
+        <span class="type-in-d3" style="display:block; color:#555">  company <span class="neon-c">SPS</span></span>
+      </div>
+      <div style="position:absolute;bottom:1em;right:1em;font-size:0.4em;color:#333;">
+        [SPACE] para continuar<span class="cursor">_</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 2: HOOK — El momento de confusión               -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// El Escenario</div>
+      <h2 class="slide-title">Eres el atacante. Todo va bien... hasta que:</h2>
+
+      <div class="terminal">
+        <div class="terminal-header">
+
+          <span class="term-title">kali@hackgdl — bash</span>
+        </div>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">nmap -sV -p- target.api.empresa.com</span><br/>
+        <span class="output">Starting Nmap 7.94 ( https://nmap.org )</span><br/>
+        <span class="warn">Note: Host seems down.</span><br/>
+        <span class="output">If it is really up, but blocking our ping probes, try -Pn</span><br/>
+        <span class="output">Nmap done: 1 IP address (0 hosts up) scanned in 21.34 seconds</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">curl http://target.api.empresa.com</span><br/>
+        <span class="error">curl: (7) Failed to connect: Connection refused</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">ffuf -u http://target.api.empresa.com/FUZZ -w api-wordlist.txt</span><br/>
+        <span class="error">:: Progress: [5000/5000] :: 0 req/sec :: Errors: 5000</span>
+      </div>
+
+      <div class="key-point">
+        ¿Qué pasa cuando tu arsenal de herramientas ofensivas no encuentra nada que atacar?
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 3: AGENDA                                        -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Agenda</div>
+      <h2 class="slide-title">Plan de <span>ataque</span> para hoy</h2>
+
+      <div class="terminal" style="font-size:0.65em;">
+        <div class="terminal-header">
+
+        </div>
+        <span class="output">1.</span> <span class="success">CONTEXTO</span>      <span class="output">→ APIs como superficie de ataque #1</span><br/>
+        <span class="output">2.</span> <span class="error">DEMO LIVE</span>     <span class="output">→ Ataque completo contra API pública (crAPI)</span><br/>
+        <span class="output">   </span> <span class="output">  nmap → ffuf → BOLA → brute force → data leak</span><br/>
+        <span class="output">3.</span> <span class="warn">CONCEPTOS</span>    <span class="output">→ Zero Trust + Dark Services</span><br/>
+        <span class="output">4.</span> <span class="success">DEMO LIVE</span>     <span class="output">→ Los mismos ataques... fallan</span><br/>
+        <span class="output">5.</span> <span class="output">IMPLEMENTACIÓN</span> <span class="output">→ OpenZiti en tus proyectos</span><br/>
+        <span class="output">6.</span> <span class="output">TAKEAWAYS</span>    <span class="output">→ Q&amp;A</span>
+      </div>
+
+      <div class="slide-note">
+        Duración: 20 min &nbsp;|&nbsp; Demos en vivo &nbsp;|&nbsp; Sin slides de vendor
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 4: CONTEXTO — APIs en el mundo real             -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Contexto</div>
+      <h2 class="slide-title">El mundo corre en <span>APIs</span></h2>
+
+      <div class="cols cols-3">
+        <div>
+          <div class="stat-big">83%</div>
+          <div class="stat-label">del tráfico de internet<br/>es tráfico de API</div>
+        </div>
+        <div>
+          <div class="stat-big" style="color:var(--neon-yellow);">#1</div>
+          <div class="stat-label">APIs = vector de ataque<br/>más común en 2025</div>
+        </div>
+        <div>
+          <div class="stat-big" style="color:var(--neon-cyan);">94%</div>
+          <div class="stat-label">de organizaciones tuvieron<br/>un incidente de API en 2024</div>
+        </div>
+      </div>
+
+      <br/>
+
+      <div class="key-point">
+        El problema no es solo <em>cómo</em> proteges tu API.<br/>
+        Es que <strong class="neon-r">existe</strong> en la red — y eso ya es suficiente para ser atacada.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 5: crAPI — El objetivo de la demo               -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Target</div>
+      <h2 class="slide-title">El objetivo: <span>crAPI</span></h2>
+
+      <div class="cols cols-2">
+        <div>
+          <div class="card info">
+            <h3>¿Qué es crAPI?</h3>
+            <ul>
+              <li>Completely Ridiculous API</li>
+              <li>Proyecto oficial de <strong>OWASP</strong></li>
+              <li>API vulnerable intencionalmente</li>
+              <li>Simula una app de gestión de vehículos</li>
+              <li>Implementa el OWASP API Top 10 completo</li>
+            </ul>
+          </div>
+          <div class="terminal" style="margin-top:0.5em;">
+            <div class="terminal-header">
+
+              <span class="term-title">crapi@docker — compose</span>
+            </div>
+            <span class="prompt">$</span> <span class="cmd">docker-compose up -d</span><br/>
+            <span class="success">✓ crapi-web        :8888</span><br/>
+            <span class="success">✓ crapi-identity   :8080</span><br/>
+            <span class="success">✓ crapi-community  :8087</span><br/>
+            <span class="success">✓ mailhog          :8025</span>
+          </div>
+        </div>
+
+        <div class="card danger">
+          <h3>Vulnerabilidades incluidas</h3>
+          <ul>
+            <li><span class="owasp-badge">API1</span> BOLA / IDOR</li>
+            <li><span class="owasp-badge">API2</span> Broken Authentication</li>
+            <li><span class="owasp-badge">API3</span> Broken Object Property Auth</li>
+            <li><span class="owasp-badge">API4</span> Sin Rate Limiting</li>
+            <li><span class="owasp-badge">API5</span> Broken Function Level Auth</li>
+            <li><span class="owasp-badge">API6</span> Server Side Request Forgery</li>
+            <li><span class="owasp-badge">API8</span> Security Misconfiguration</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 6: DEMO 1 — RECONOCIMIENTO (referencia live)    -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#050505">
+      <div class="section-tag red">// DEMO LIVE — FASE 1</div>
+      <h2 class="slide-title red">Reconocimiento: <span>nmap + ffuf</span></h2>
+
+      <div class="terminal">
+        <div class="terminal-header">
+
+          <span class="term-title">DEMO EN VIVO</span>
+        </div>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">nmap -sV -p 8888,8025,8443 localhost --open</span><br/>
+        <span class="success">PORT     STATE SERVICE  VERSION</span><br/>
+        <span class="success">8888/tcp open  http     nginx 1.21.x</span><br/>
+        <span class="success">8025/tcp open  http     MailHog</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">ffuf -u http://localhost:8888/FUZZ -w api-endpoints.txt -mc 200,401,403</span><br/>
+        <span class="success">/api/v2/user/login      [200]</span><br/>
+        <span class="success">/api/v2/user/dashboard  [401]</span><br/>
+        <span class="success">/api/v2/vehicle         [401]</span><br/>
+        <span class="success">/api/v2/community/posts [200]</span>
+      </div>
+
+      <div class="key-point red">
+        <span class="neon-r">Resultado:</span> Puertos abiertos. Servicios identificados. Endpoints enumerados. Tenemos superficie de ataque.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 7: DEMO 1 — BOLA                                -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#050505">
+      <div class="section-tag red">// DEMO LIVE — FASE 2</div>
+      <h2 class="slide-title red">
+        <span class="owasp-badge">API1</span> BOLA — Broken Object Level Authorization
+      </h2>
+
+      <div class="terminal">
+        <div class="terminal-header">
+
+          <span class="term-title">DEMO EN VIVO</span>
+        </div>
+        <span class="prompt">$</span> <span class="cmd">curl http://crapi-web/identity/api/v2/vehicle/<span class="warn">VICTIM_UUID</span>/location \</span><br/>
+        <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp; -H "Authorization: Bearer $ATTACKER_TOKEN"</span><br/>
+        <br/>
+        <span class="success">HTTP 200 OK</span><br/>
+        <span class="error">{"carId":"88ee25b0","lat":20.6534,"long":-103.3465,"vehicleLocation":"Guadalajara, Jalisco"}</span>
+      </div>
+
+      <div class="cols cols-2" style="margin-top:0.4em;">
+        <div class="card danger">
+          <h3>¿Por qué funciona?</h3>
+          <ul>
+            <li>El API no valida si el vehicleId pertenece al usuario autenticado</li>
+            <li>Solo verifica que el JWT sea válido</li>
+            <li>Los IDs son predecibles / obtenibles de otros endpoints</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:#333;">
+          <h3>Impacto</h3>
+          <ul>
+            <li>Tracking de ubicación GPS de víctimas</li>
+            <li>GDPR / LFPDPPP violation</li>
+            <li>CVSS: <span class="neon-r">8.1 (High)</span></li>
+            <li>Explotable sin conocimiento previo</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 8: DEMO 1 — Rate Limiting + Data Exposure       -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#050505">
+      <div class="section-tag red">// DEMO LIVE — FASE 3 y 4</div>
+      <h2 class="slide-title red">Más vulnerabilidades en minutos</h2>
+
+      <div class="cols cols-2">
+        <div>
+          <div class="terminal" style="font-size:0.52em;">
+            <div class="terminal-header">
+
+              <span class="term-title"><span class="owasp-badge">API4</span> Sin Rate Limiting</span>
+            </div>
+            <span class="output"># 20 intentos de login, 0 bloqueados</span><br/>
+            <span class="prompt">$</span> <span class="cmd">for i in $(seq 1 20); do</span><br/>
+            <span class="cmd">&nbsp;&nbsp;curl -X POST /api/v2/user/login \</span><br/>
+            <span class="cmd" style="animation:none">&nbsp;&nbsp;&nbsp;&nbsp;-d '{"email":"v@test.com","pass":"wrong_$i"}'</span><br/>
+            <span class="cmd" style="animation:none">done</span><br/>
+            <br/>
+            <span class="success">Request  1 → HTTP 401 (sin bloqueo)</span><br/>
+            <span class="success">Request 10 → HTTP 401 (sin bloqueo)</span><br/>
+            <span class="success">Request 20 → HTTP 401 (sin bloqueo)</span><br/>
+            <span class="error">→ 0 requests bloqueados de 20</span>
+          </div>
+        </div>
+        <div>
+          <div class="terminal" style="font-size:0.52em;">
+            <div class="terminal-header">
+
+              <span class="term-title"><span class="owasp-badge">API3</span> Exposición de Datos</span>
+            </div>
+            <span class="prompt">$</span> <span class="cmd" style="animation:none">curl /api/v2/community/posts/recent | jq '.[0].author'</span><br/>
+            <br/>
+            <span class="output">{</span><br/>
+            <span class="output">&nbsp;&nbsp;"nickname": "victim_user",</span><br/>
+            <span class="error">&nbsp;&nbsp;"email":    "victim@company.com",  ← PII</span><br/>
+            <span class="error">&nbsp;&nbsp;"vehicleId":"VICTIM_CAR_2847",     ← ID</span><br/>
+            <span class="error">&nbsp;&nbsp;"pincode":  "1234"                 ← !!!</span><br/>
+            <span class="output">}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="key-point red" style="margin-top:0.5em;">
+        <span class="neon-r">7 minutos.</span> Reconocimiento completo. 3 vulnerabilidades críticas explotadas. Datos de usuarios comprometidos.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 9: PAUSA — El Modelo Tradicional                -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Zero Trust Architecture</div>
+      <h2 class="slide-title">El problema es la <span>exposición</span></h2>
+
+      <div class="cols cols-2" style="gap:1em; margin-top:0.3em;">
+
+        <!-- ── Diagrama 1: Modelo Tradicional ── -->
+        <div class="terminal red">
+          <div class="terminal-header">
+
+            <span class="term-title">MODELO TRADICIONAL</span>
+          </div>
+          <svg viewBox="0 0 440 142" width="100%" style="display:block;" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="t-arr-r" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+                <polygon points="0 0,7 3,0 6" fill="#ff0033"/>
+              </marker>
+              <marker id="t-arr-y" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+                <polygon points="0 0,7 3,0 6" fill="#ffcc00"/>
+              </marker>
+            </defs>
+
+            <!-- Internet -->
+            <rect x="5" y="28" width="72" height="28" rx="4" fill="#1a0000" stroke="#ff0033" stroke-width="1.5"/>
+            <text x="41" y="40" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ff6666">INTERNET</text>
+            <text x="41" y="52" text-anchor="middle" font-family="Courier New" font-size="8" fill="#cc4444">público</text>
+
+            <!-- arrow -->
+            <line x1="77" y1="42" x2="97" y2="42" stroke="#ff0033" stroke-width="1.5" marker-end="url(#t-arr-r)"/>
+
+            <!-- DNS -->
+            <rect x="99" y="28" width="96" height="28" rx="4" fill="#1a0000" stroke="#ff0033" stroke-width="1.5"/>
+            <text x="147" y="40" text-anchor="middle" font-family="Courier New" font-size="9" fill="#ff9999">DNS PÚBLICO</text>
+            <text x="147" y="52" text-anchor="middle" font-family="Courier New" font-size="8" fill="#ff5555">api.empresa.com</text>
+
+            <!-- arrow -->
+            <line x1="195" y1="42" x2="213" y2="42" stroke="#ff0033" stroke-width="1.5" marker-end="url(#t-arr-r)"/>
+
+            <!-- PORT:443 OPEN — highlighted -->
+            <rect x="215" y="21" width="104" height="42" rx="4" fill="#2a0000" stroke="#ff0033" stroke-width="2.5"/>
+            <text x="267" y="37" text-anchor="middle" font-family="Courier New" font-size="10.5" fill="#ff3333" font-weight="bold">PORT :443</text>
+            <text x="267" y="53" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#ff6666">0.0.0.0  OPEN</text>
+
+            <!-- arrow -->
+            <line x1="319" y1="42" x2="338" y2="42" stroke="#ff0033" stroke-width="1.5" marker-end="url(#t-arr-r)"/>
+
+            <!-- Backend -->
+            <rect x="340" y="28" width="95" height="28" rx="4" fill="#111418" stroke="#444" stroke-width="1"/>
+            <text x="387" y="40" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ccc">API</text>
+            <text x="387" y="52" text-anchor="middle" font-family="Courier New" font-size="8" fill="#aaa">BACKEND</text>
+
+            <!-- Attacker box -->
+            <rect x="196" y="96" width="142" height="30" rx="4" fill="#1a1000" stroke="#ffcc00" stroke-width="1.5"/>
+            <text x="267" y="109" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ffcc00">ATACANTE</text>
+            <text x="267" y="121" text-anchor="middle" font-family="Courier New" font-size="8" fill="#ffcc00">nmap  ·  ffuf  ·  curl</text>
+
+            <!-- Dashed arrow attacker → port -->
+            <line x1="267" y1="96" x2="267" y2="65" stroke="#ffcc00" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#t-arr-y)"/>
+            <text x="276" y="84" font-family="Courier New" font-size="8" fill="#ffcc00">ve IP + puerto</text>
+
+            <!-- Caption -->
+            <text x="220" y="138" text-anchor="middle" font-family="Courier New" font-size="9" fill="#ff4444" font-weight="bold">✗  superficie de ataque expuesta</text>
+          </svg>
+        </div>
+
+        <!-- ── Diagrama 2: Dark Service / Zero Trust ── -->
+        <div class="terminal cyan">
+          <div class="terminal-header">
+
+            <span class="term-title">DARK SERVICE / ZERO TRUST</span>
+          </div>
+          <svg viewBox="0 0 440 142" width="100%" style="display:block;" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <marker id="d-arr-r" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+                <polygon points="0 0,7 3,0 6" fill="#ff0033"/>
+              </marker>
+              <marker id="d-arr-c" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+                <polygon points="0 0,7 3,0 6" fill="#00d4ff"/>
+              </marker>
+              <marker id="d-arr-g" markerWidth="7" markerHeight="6" refX="6" refY="3" orient="auto">
+                <polygon points="0 0,7 3,0 6" fill="#00ff41"/>
+              </marker>
+            </defs>
+
+            <!-- Attacker (left) -->
+            <rect x="5" y="55" width="88" height="30" rx="4" fill="#1a1000" stroke="#ffcc00" stroke-width="1.5"/>
+            <text x="49" y="68" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ffcc00">ATACANTE</text>
+            <text x="49" y="80" text-anchor="middle" font-family="Courier New" font-size="8" fill="#ffcc00">nmap · ffuf · curl</text>
+
+            <!-- DNS fail -->
+            <line x1="93" y1="63" x2="118" y2="25" stroke="#ff0033" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#d-arr-r)"/>
+            <rect x="120" y="13" width="98" height="22" rx="3" fill="#0a0000" stroke="#ff0033" stroke-width="1"/>
+            <text x="169" y="28" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#ff5555">DNS: NXDOMAIN  ✗</text>
+
+            <!-- TCP fail -->
+            <line x1="93" y1="70" x2="118" y2="70" stroke="#ff0033" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#d-arr-r)"/>
+            <rect x="120" y="59" width="98" height="22" rx="3" fill="#0a0000" stroke="#ff0033" stroke-width="1"/>
+            <text x="169" y="74" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#ff5555">TCP: 0 hosts  ✗</text>
+
+            <!-- HTTP fail -->
+            <line x1="93" y1="77" x2="118" y2="115" stroke="#ff0033" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#d-arr-r)"/>
+            <rect x="120" y="104" width="98" height="22" rx="3" fill="#0a0000" stroke="#ff0033" stroke-width="1"/>
+            <text x="169" y="119" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#ff5555">HTTP: refused  ✗</text>
+
+            <!-- Vertical divider -->
+            <line x1="233" y1="6" x2="233" y2="136" stroke="#2d4a5a" stroke-width="1.5" stroke-dasharray="5,4"/>
+
+            <!-- ZT User -->
+            <rect x="244" y="11" width="128" height="28" rx="4" fill="#001520" stroke="#00d4ff" stroke-width="1.5"/>
+            <text x="308" y="23" text-anchor="middle" font-family="Courier New" font-size="9" fill="#00d4ff">USUARIO ZT</text>
+            <text x="308" y="35" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#00d4ff">identidad verificada</text>
+
+            <!-- Arrow → Fabric -->
+            <line x1="308" y1="39" x2="308" y2="57" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#d-arr-c)"/>
+
+            <!-- ZT Fabric -->
+            <rect x="244" y="59" width="128" height="28" rx="4" fill="#001020" stroke="#00d4ff" stroke-width="1.5"/>
+            <text x="308" y="71" text-anchor="middle" font-family="Courier New" font-size="9" fill="#00d4ff">ZT FABRIC</text>
+            <text x="308" y="83" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#00d4ff">OpenZiti / NetFoundry</text>
+
+            <!-- Arrow → API -->
+            <line x1="308" y1="87" x2="308" y2="105" stroke="#00ff41" stroke-width="1.5" marker-end="url(#d-arr-g)"/>
+
+            <!-- API Backend (dark, no ports exposed) -->
+            <rect x="244" y="107" width="128" height="28" rx="4" fill="#001a00" stroke="#00ff41" stroke-width="1.5"/>
+            <text x="308" y="119" text-anchor="middle" font-family="Courier New" font-size="9" fill="#00ff41">API BACKEND</text>
+            <text x="308" y="131" text-anchor="middle" font-family="Courier New" font-size="7.5" fill="#00cc55">sin DNS · sin puertos</text>
+
+            <!-- Captions -->
+            <text x="116" y="141" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#ff4444" font-weight="bold">superficie = CERO</text>
+            <text x="353" y="141" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#00cc44" font-weight="bold">acceso verificado  ✓</text>
+          </svg>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 10: ARQUITECTURA DE LA DEMO                     -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Arquitectura de la Demo</div>
+      <h2 class="slide-title">Todos los <span>componentes</span> en juego</h2>
+
+      <svg viewBox="0 0 800 270" width="100%" style="display:block; margin-top:0.25em;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a-grn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#00ff41"/>
+          </marker>
+          <marker id="a-cyn" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#00d4ff"/>
+          </marker>
+          <marker id="a-yel" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#ffcc00"/>
+          </marker>
+          <marker id="a-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#ff0033"/>
+          </marker>
+          <marker id="a-gry" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#3a4a5a"/>
+          </marker>
+        </defs>
+
+        <!-- ══ WINDOWS HOST (siempre visible) ══ -->
+        <rect x="4" y="4" width="490" height="262" rx="8" fill="#050a08" stroke="#333" stroke-width="1.5"/>
+        <text x="18" y="21" class="term-flicker" font-family="Courier New" font-size="14" fill="#777" letter-spacing="2">WINDOWS HOST</text>
+
+        <!-- ── Fragment 1: Docker + servicios internos ── -->
+        <g class="fragment fade-in" data-fragment-index="1">
+          <rect x="18" y="28" width="325" height="185" rx="6" fill="#030808" stroke="#00d4ff" stroke-width="1" stroke-dasharray="6,4"/>
+          <text x="32" y="43" font-family="Courier New" font-size="10" fill="#0099bb" letter-spacing="2">Docker  ·  crapi_default</text>
+
+          <rect x="30" y="48" width="110" height="42" rx="4" fill="#002200" stroke="#00ff41" stroke-width="2"/>
+          <text x="85" y="65" class="term-glow" text-anchor="middle" font-family="Courier New" font-size="13" fill="#00ff41" font-weight="bold">crapi-web</text>
+          <text x="85" y="81" text-anchor="middle" font-family="Courier New" font-size="10" fill="#00aa44">:8888</text>
+
+          <rect x="155" y="48" width="180" height="42" rx="4" fill="#0f1318" stroke="#2a3a4a" stroke-width="1"/>
+          <text x="245" y="63" text-anchor="middle" font-family="Courier New" font-size="10" fill="#8899aa">identity · community</text>
+          <text x="245" y="79" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#778899">postgres · mongo · mailhog</text>
+
+          <line x1="140" y1="69" x2="154" y2="69" stroke="#2a3a4a" stroke-width="1" marker-end="url(#a-gry)"/>
+        </g>
+
+        <!-- ── Fragment 2: ziti-host + kali-attacker ── -->
+        <g class="fragment fade-in" data-fragment-index="2">
+          <rect x="30" y="147" width="120" height="42" rx="4" fill="#001520" stroke="#00d4ff" stroke-width="1.5"/>
+          <text x="90" y="164" class="term-glow-b" text-anchor="middle" font-family="Courier New" font-size="13" fill="#00d4ff">ziti-host</text>
+          <text x="90" y="181" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#0099bb">saliente → NF</text>
+
+          <rect x="163" y="147" width="172" height="42" rx="4" fill="#1a1400" stroke="#ffcc00" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="249" y="164" class="term-glow-c" text-anchor="middle" font-family="Courier New" font-size="13" fill="#ffcc00">kali-attacker</text>
+          <text x="249" y="181" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ccaa00">hackgdl-attacker</text>
+
+          <text x="175" y="207" font-family="Courier New" font-size="9.5" fill="#aa8800">01·recon  02·bola  03·brute  04·data  05·dark</text>
+        </g>
+
+        <!-- ── Fragment 3: dark-client ── -->
+        <g class="fragment fade-in" data-fragment-index="3">
+          <rect x="360" y="95" width="125" height="58" rx="6" fill="#001a10" stroke="#00ff41" stroke-width="1.5"/>
+          <rect x="360" y="95" width="125" height="58" rx="6" fill="none" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="3,3"/>
+          <text x="422" y="118" class="term-glow-d" text-anchor="middle" font-family="Courier New" font-size="13" fill="#00ff41" font-weight="bold">dark-client</text>
+          <text x="422" y="133" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#00cc55">Java OpenZiti SDK</text>
+          <text x="422" y="147" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#0099bb">myConsumer.json</text>
+        </g>
+
+        <!-- ── Fragment 4: NetFoundry SaaS ── -->
+        <g class="fragment fade-in" data-fragment-index="4">
+          <rect x="503" y="8" width="293" height="258" rx="10" fill="#000810" stroke="#00d4ff" stroke-width="1" stroke-dasharray="8,5"/>
+          <text x="649" y="27" text-anchor="middle" font-family="Courier New" font-size="13" fill="#0099bb" letter-spacing="2">NetFoundry SaaS</text>
+
+          <rect x="517" y="34" width="142" height="38" rx="4" fill="#001520" stroke="#00d4ff" stroke-width="1"/>
+          <text x="588" y="50" text-anchor="middle" font-family="Courier New" font-size="12" fill="#00d4ff">ZT Controller</text>
+          <text x="588" y="64" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#0099bb">identidades + políticas</text>
+
+          <line x1="588" y1="72" x2="588" y2="87" stroke="#00d4ff" stroke-width="1" marker-end="url(#a-cyn)"/>
+
+          <rect x="517" y="89" width="142" height="38" rx="4" fill="#001520" stroke="#00d4ff" stroke-width="2"/>
+          <text x="588" y="105" class="term-glow" text-anchor="middle" font-family="Courier New" font-size="13" fill="#00d4ff" font-weight="bold">ZT Fabric</text>
+          <text x="588" y="120" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#0099bb">overlay cifrado</text>
+
+          <line x1="588" y1="127" x2="588" y2="142" stroke="#00ff41" stroke-width="1" marker-end="url(#a-grn)"/>
+
+          <rect x="517" y="144" width="150" height="38" rx="4" fill="#001a00" stroke="#00ff41" stroke-width="1.5"/>
+          <text x="592" y="160" class="term-glow-b" text-anchor="middle" font-family="Courier New" font-size="12" fill="#00ff41">crapi-dark</text>
+          <text x="592" y="175" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#00aa44">dark.crapi.hackgdl</text>
+
+          <rect x="517" y="198" width="272" height="60" rx="4" fill="#030a03" stroke="#1e2832" stroke-width="1" stroke-dasharray="4,3"/>
+          <text x="530" y="213" font-family="Courier New" font-size="10" fill="#559955">Identidades enrolladas:</text>
+          <rect x="526" y="218" width="120" height="24" rx="3" fill="#001a00" stroke="#00ff41" stroke-width="1"/>
+          <text x="586" y="234" text-anchor="middle" font-family="Courier New" font-size="10" fill="#00cc44">myConsumer.json ✓</text>
+          <rect x="660" y="218" width="122" height="24" rx="3" fill="#0a0000" stroke="#333" stroke-width="1"/>
+          <text x="721" y="234" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#aa5555">kali: no enrollado ✗</text>
+          <text x="526" y="252" font-family="Courier New" font-size="9.5" fill="#557755">policy: solo api-clients autorizados</text>
+        </g>
+
+        <!-- ── Fragment 5: Conexiones cruzadas ── -->
+        <g class="fragment fade-in" data-fragment-index="5">
+          <path d="M90,189 L90,240 L588,240 L588,128" stroke="#00d4ff" stroke-width="1.5" fill="none" stroke-dasharray="6,3" marker-end="url(#a-cyn)"/>
+          <text x="310" y="254" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#0099bb">saliente (no abre puertos de entrada)</text>
+
+          <line x1="485" y1="124" x2="516" y2="108" stroke="#00ff41" stroke-width="1.5" marker-end="url(#a-grn)"/>
+          <text x="488" y="108" font-family="Courier New" font-size="9.5" fill="#00aa44">ZT</text>
+
+          <path d="M163,147 L143,147 L143,91 L141,91" stroke="#ffcc00" stroke-width="1.5" fill="none" stroke-dasharray="5,3" marker-end="url(#a-yel)"/>
+          <text x="127" y="125" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ccaa00">01-04</text>
+
+          <path d="M335,168 L490,168" stroke="#ff0033" stroke-width="1.5" fill="none" stroke-dasharray="4,3" marker-end="url(#a-red)"/>
+          <text x="410" y="162" text-anchor="middle" font-family="Courier New" font-size="9.5" fill="#ff4444">05-dark</text>
+          <text x="493" y="178" class="term-glow-c" font-family="Courier New" font-size="17" fill="#ff0033" font-weight="bold">✗</text>
+          <text x="493" y="157" class="term-glow-d" font-family="Courier New" font-size="9.5" fill="#cc3333">NXDOMAIN</text>
+        </g>
+
+        <!-- ── Fragment 6: Leyenda ── -->
+        <g class="fragment fade-in" data-fragment-index="6">
+          <line x1="18" y1="257" x2="40" y2="257" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="6,3"/>
+          <text x="44" y="261" font-family="Courier New" font-size="9.5" fill="#0099bb">ZT saliente</text>
+          <line x1="135" y1="257" x2="157" y2="257" stroke="#00ff41" stroke-width="1.5"/>
+          <text x="161" y="261" font-family="Courier New" font-size="9.5" fill="#00aa44">ZT autorizado</text>
+          <line x1="272" y1="257" x2="294" y2="257" stroke="#ffcc00" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <text x="298" y="261" font-family="Courier New" font-size="9.5" fill="#ccaa00">red interna</text>
+          <line x1="385" y1="257" x2="407" y2="257" stroke="#ff0033" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <text x="411" y="261" font-family="Courier New" font-size="9.5" fill="#cc3333">bloqueado</text>
+        </g>
+
+      </svg>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 11: Cómo funciona OpenZiti                      -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// OpenZiti / NetFoundry</div>
+      <h2 class="slide-title">¿Cómo funciona un <span>Dark Service</span>?</h2>
+
+      <div class="cols cols-2" style="gap:0.6em; margin-top:0.2em;">
+        <div>
+          <div class="card info">
+            <h3>Principios</h3>
+            <ul>
+              <li><strong class="neon-c">Never trust, always verify</strong></li>
+              <li>El servicio hace conexión <em>saliente</em> al broker</li>
+              <li>No abre puertos de entrada</li>
+              <li>No tiene registro DNS público</li>
+              <li>Mutual TLS + certificados por identidad</li>
+              <li>Autorización granular por servicio</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="terminal" style="font-size:0.47em;">
+          <div class="terminal-header">
+
+            <span class="term-title">ziti@darkservice — shell</span>
+          </div>
+          <span class="output"># Tu API registrada como dark service</span><br/>
+          <span class="prompt">$</span> <span class="cmd">ziti edge create service mi-api</span><br/>
+          <span class="success">Created service: mi-api</span><br/>
+          <br/>
+          <span class="output"># La API conecta SALIENTE al broker</span><br/>
+          <span class="output"># (no abre ningún puerto de entrada)</span><br/>
+          <br/>
+          <span class="prompt">$</span> <span class="cmd">ziti tunnel bind --identity server.json \</span><br/>
+          <span class="cmd">&nbsp;&nbsp;--service mi-api \</span><br/>
+          <span class="cmd">&nbsp;&nbsp;--host localhost --port 8888</span><br/>
+          <span class="success">Tunneling mi-api → localhost:8888</span><br/>
+          <br/>
+          <span class="output"># El cliente necesita identidad válida</span><br/>
+          <span class="prompt">$</span> <span class="cmd">ziti tunnel run client.json</span><br/>
+          <span class="success">Intercepting: dark.api.internal → ZT</span>
+        </div>
+      </div>
+
+      <div class="key-point" style="margin-top:0.2em;">
+        OpenZiti es <strong>open source</strong>. NetFoundry es el SaaS administrado.
+        Ambos soportan Node.js, Python, Go, Java — y MCP para agentes de IA.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 11: DEMO 2 — Ataques que fallan                 -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#050505">
+      <div class="section-tag green">// DEMO LIVE — El Playbook FALLA</div>
+      <h2 class="slide-title green">
+        Los mismos ataques contra la <span class="neon-g">Dark API</span>
+      </h2>
+
+      <div class="terminal">
+        <div class="terminal-header">
+
+          <span class="term-title">DEMO EN VIVO</span>
+        </div>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">nmap -sV -p- dark.api.hackgdl</span><br/>
+        <span class="error">Host seems down. 0 ports open.</span>
+        &nbsp;&nbsp;&nbsp;<span class="result-pill safe">FAIL</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">ffuf -u http://dark.api.hackgdl/FUZZ -w api-wordlist.txt</span><br/>
+        <span class="error">Errors: 5000/5000 — Connection refused</span>
+        &nbsp;<span class="result-pill safe">FAIL</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">curl http://dark.api.hackgdl/api/v2/user/login</span><br/>
+        <span class="error">curl: (7) Connection refused</span>
+        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="result-pill safe">FAIL</span><br/>
+        <br/>
+        <span class="prompt">root@kali:~#</span> <span class="cmd">nslookup dark.api.hackgdl</span><br/>
+        <span class="error">** server can't find dark.api.hackgdl: NXDOMAIN</span>
+        <span class="result-pill safe">FAIL</span>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 12: KILL CHAIN                                  -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag red">// Cyber Kill Chain</div>
+      <h2 class="slide-title red">El ataque colapsa en el <span>PASO 1</span></h2>
+
+      <svg viewBox="0 0 870 248" width="100%" style="display:block; margin-top:0.3em;" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="kc-y" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#ffcc00"/>
+          </marker>
+          <marker id="kc-g" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+            <polygon points="0 0,8 3,0 6" fill="#3a4a3a"/>
+          </marker>
+        </defs>
+
+        <!-- ══ PASO 1: RECON (atacante llega aquí) ══ -->
+        <rect x="31" y="28" width="132" height="58" rx="5" fill="#1a1000" stroke="#ffcc00" stroke-width="2"/>
+        <text x="97" y="44" text-anchor="middle" font-family="Courier New" font-size="9" fill="#aa8800">01</text>
+        <text x="97" y="59" text-anchor="middle" font-family="Courier New" font-size="14" fill="#ffcc00" font-weight="bold">RECON</text>
+        <text x="97" y="75" text-anchor="middle" font-family="Courier New" font-size="9" fill="#887700">nmap · DNS · ffuf</text>
+
+        <!-- Arrow step 1 → wall -->
+        <line x1="163" y1="57" x2="170" y2="57" stroke="#ffcc00" stroke-width="2" marker-end="url(#kc-y)"/>
+
+        <!-- ══ DARK API WALL ══ -->
+        <!-- Label above wall -->
+        <rect x="148" y="1" width="72" height="16" rx="3" fill="#1a0000" stroke="#ff0033" stroke-width="1"/>
+        <text x="184" y="13" text-anchor="middle" font-family="Courier New" font-size="9" fill="#ff4444" letter-spacing="1">DARK API</text>
+        <!-- Wall body -->
+        <rect x="172" y="17" width="24" height="102" rx="2" fill="#ff0033" opacity="0.85"/>
+        <line x1="172" y1="29" x2="196" y2="29" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="41" x2="196" y2="41" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="53" x2="196" y2="53" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="65" x2="196" y2="65" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="77" x2="196" y2="77" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="89" x2="196" y2="89" stroke="#880000" stroke-width="1"/>
+        <line x1="172" y1="101" x2="196" y2="101" stroke="#880000" stroke-width="1"/>
+
+        <!-- ══ PASOS 2-5 (dimmed — nunca alcanzados) ══ -->
+        <g opacity="0.90">
+          <!-- Paso 2: MAPEO -->
+          <rect x="205" y="28" width="132" height="58" rx="5" fill="#111418" stroke="#555" stroke-width="1.5"/>
+          <text x="271" y="44" text-anchor="middle" font-family="Courier New" font-size="9" fill="#888">02</text>
+          <text x="271" y="59" text-anchor="middle" font-family="Courier New" font-size="14" fill="#999" font-weight="bold">MAPEO</text>
+          <text x="271" y="75" text-anchor="middle" font-family="Courier New" font-size="9" fill="#666">endpoint enum</text>
+          <line x1="337" y1="57" x2="372" y2="57" stroke="#444" stroke-width="1.5" marker-end="url(#kc-g)"/>
+
+          <!-- Paso 3: EXPLOIT -->
+          <rect x="374" y="28" width="132" height="58" rx="5" fill="#111418" stroke="#555" stroke-width="1.5"/>
+          <text x="440" y="44" text-anchor="middle" font-family="Courier New" font-size="9" fill="#888">03</text>
+          <text x="440" y="59" text-anchor="middle" font-family="Courier New" font-size="14" fill="#999" font-weight="bold">EXPLOIT</text>
+          <text x="440" y="75" text-anchor="middle" font-family="Courier New" font-size="9" fill="#666">BOLA · brute force</text>
+          <line x1="506" y1="57" x2="541" y2="57" stroke="#444" stroke-width="1.5" marker-end="url(#kc-g)"/>
+
+          <!-- Paso 4: EXTRACCIÓN -->
+          <rect x="543" y="28" width="132" height="58" rx="5" fill="#111418" stroke="#555" stroke-width="1.5"/>
+          <text x="609" y="44" text-anchor="middle" font-family="Courier New" font-size="9" fill="#888">04</text>
+          <text x="609" y="59" text-anchor="middle" font-family="Courier New" font-size="14" fill="#999" font-weight="bold">EXTRACCIÓN</text>
+          <text x="609" y="75" text-anchor="middle" font-family="Courier New" font-size="9" fill="#666">data leak · PII</text>
+          <line x1="675" y1="57" x2="710" y2="57" stroke="#444" stroke-width="1.5" marker-end="url(#kc-g)"/>
+
+          <!-- Paso 5: PERSISTENCIA -->
+          <rect x="712" y="28" width="132" height="58" rx="5" fill="#111418" stroke="#555" stroke-width="1.5"/>
+          <text x="778" y="44" text-anchor="middle" font-family="Courier New" font-size="9" fill="#888">05</text>
+          <text x="778" y="59" text-anchor="middle" font-family="Courier New" font-size="14" fill="#999" font-weight="bold">PERSISTENCIA</text>
+          <text x="778" y="75" text-anchor="middle" font-family="Courier New" font-size="9" fill="#666">takeover · pivoting</text>
+        </g>
+
+        <!-- "INALCANZABLE" label spanning steps 2-5 -->
+        <text x="524" y="106" text-anchor="middle" font-family="Courier New" font-size="11" fill="#aaa" letter-spacing="4">// INALCANZABLE //</text>
+
+        <!-- ══ ATACANTE box (below step 1) ══ -->
+        <!-- Arrow attacker → step 1 -->
+        <line x1="97" y1="119" x2="97" y2="87" stroke="#ffcc00" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#kc-y)"/>
+
+        <!-- Attacker box -->
+        <rect x="31" y="121" width="132" height="92" rx="4" fill="#1a1000" stroke="#ffcc00" stroke-width="1.5"/>
+        <text x="97" y="137" text-anchor="middle" font-family="Courier New" font-size="11" fill="#ffcc00">ATACANTE</text>
+        <line x1="38" y1="142" x2="156" y2="142" stroke="#332200" stroke-width="1"/>
+        <text x="42" y="156" font-family="Courier New" font-size="10" fill="#cc3333">nmap  →  0 hosts   ✗</text>
+        <text x="42" y="170" font-family="Courier New" font-size="10" fill="#cc3333">DNS   →  NXDOMAIN  ✗</text>
+        <text x="42" y="184" font-family="Courier New" font-size="10" fill="#cc3333">ffuf  →  refused   ✗</text>
+        <text x="42" y="198" font-family="Courier New" font-size="10" fill="#cc3333">curl  →  refused   ✗</text>
+
+        <!-- script 05 reference -->
+        <text x="97" y="221" text-anchor="middle" font-family="Courier New" font-size="8.5" fill="#554400">↑  script 05</text>
+
+        <!-- ══ MENSAJE PRINCIPAL ══ -->
+        <rect x="80" y="230" width="710" height="16" rx="3" fill="#1a0000" stroke="#ff0033" stroke-width="1" opacity="0.85"/>
+        <text x="435" y="242" text-anchor="middle" font-family="Courier New" font-size="11.5" fill="#ff4444">
+          La superficie de ataque es CERO — el playbook ofensivo no encuentra nada que atacar
+        </text>
+
+      </svg>
+    </section>
+
+    <!-- SLIDE 13: TABLA COMPARATIVA                           -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Comparativa</div>
+      <h2 class="slide-title">API Pública vs. <span>Dark Service</span></h2>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Técnica Ofensiva</th>
+            <th>API Pública</th>
+            <th>Dark Service</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="tech">nmap port scan</td>
+            <td class="vuln">✅ Puertos visibles</td>
+            <td class="safe">✗ 0 hosts up</td>
+          </tr>
+          <tr>
+            <td class="tech">Endpoint enumeration (ffuf)</td>
+            <td class="vuln">✅ Endpoints mapeados</td>
+            <td class="safe">✗ Connection refused</td>
+          </tr>
+          <tr>
+            <td class="tech">BOLA / IDOR</td>
+            <td class="vuln">✅ Datos de víctimas</td>
+            <td class="safe">✗ Sin acceso</td>
+          </tr>
+          <tr>
+            <td class="tech">Brute force login</td>
+            <td class="vuln">✅ Sin rate limiting</td>
+            <td class="safe">✗ Sin acceso</td>
+          </tr>
+          <tr>
+            <td class="tech">Data exposure</td>
+            <td class="vuln">✅ PII en respuestas</td>
+            <td class="safe">✗ Sin acceso</td>
+          </tr>
+          <tr>
+            <td class="tech">DNS lookup</td>
+            <td class="vuln">✅ IP pública</td>
+            <td class="safe">✗ NXDOMAIN</td>
+          </tr>
+          <tr>
+            <td class="tech">TLS fingerprinting</td>
+            <td class="vuln">✅ Cert info</td>
+            <td class="safe">✗ Sin certificado expuesto</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="slide-note" style="text-align:center;">
+        El código del API tiene las <em>mismas vulnerabilidades</em> en ambos casos.<br/>
+        La diferencia es la <strong class="neon-g">arquitectura de red</strong>.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 13: IMPLEMENTACIÓN                              -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Implementación</div>
+      <h2 class="slide-title">Hazlo tú mismo — <span>OpenZiti</span> en 4 pasos</h2>
+
+      <div class="terminal" style="font-size:0.58em;">
+        <div class="terminal-header">
+
+        </div>
+        <span class="output"># 1. Levantar controlador (docker o NetFoundry SaaS)</span><br/>
+        <span class="prompt">$</span> <span class="cmd">docker run -d openziti/quickstart</span><br/>
+        <br/>
+        <span class="output"># 2. Registrar tu API como dark service</span><br/>
+        <span class="prompt">$</span> <span class="cmd">ziti edge create service "mi-api" --role-attributes api-service</span><br/>
+        <br/>
+        <span class="output"># 3. SDK en tu app — solo cambiar cómo escucha el servidor</span><br/>
+        <span class="output"># (Node.js / Python / Go / Java)</span><br/>
+        <span class="prompt">$</span> <span class="cmd">npm install @openziti/ziti-sdk-nodejs</span><br/>
+        <br/>
+        <span class="output"># 4. Crear identidades con certificados para clientes</span><br/>
+        <span class="prompt">$</span> <span class="cmd">ziti edge create identity device "mi-cliente" \</span><br/>
+        <span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;--role-attributes api-clients -o client.jwt</span>
+      </div>
+
+      <div class="cols cols-2" style="margin-top:0.5em; font-size:0.65em;">
+        <div>
+          <span class="neon-g">OpenZiti</span> — open source, self-hosted<br/>
+          <span style="color:#555;">github.com/openziti/ziti</span>
+        </div>
+        <div>
+          <span class="neon-c">NetFoundry</span> — SaaS administrado<br/>
+          <span style="color:#555;">netfoundry.io</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 14: CASOS DE USO + MCP                         -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Casos de Uso</div>
+      <h2 class="slide-title">Más allá de APIs — <span>MCPs y Agentes IA</span></h2>
+
+      <div class="cols cols-2">
+        <div class="card info">
+          <h3>APIs y Microservicios</h3>
+          <ul>
+            <li>API Gateway → Dark Service</li>
+            <li>Service mesh sin exposición</li>
+            <li>Multi-cloud sin VPN</li>
+            <li>B2B integrations privadas</li>
+          </ul>
+        </div>
+        <div class="card success">
+          <h3>MCP Servers (IA Agents)</h3>
+          <ul>
+            <li>MCP servers como Dark Services</li>
+            <li>Agentes Claude sin exposición pública</li>
+            <li>Tool calls por identidad verificada</li>
+            <li>Demo: ziti-mcp-sdk disponible</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="key-point" style="margin-top:0.8em;">
+        Si construyes agentes de IA con MCP, tus tool-servers también pueden ser Dark Services.
+        <br/>El mismo modelo de seguridad, para el futuro de las aplicaciones.
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 15: TAKEAWAYS                                   -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section data-background-color="#0a0a0a">
+      <div class="section-tag">// Takeaways</div>
+      <h2 class="slide-title">Para llevarse hoy</h2>
+
+      <div class="r-stretch" style="display:grid; grid-template-columns:1fr 1fr; grid-template-rows:1fr 1fr; gap:0.7em;">
+
+        <div class="card success">
+          <div class="tk-num neon-g">[✓] 01</div>
+          <div class="tk-title">La exposición ES la vulnerabilidad.</div>
+          <div class="tk-desc">No importa qué firewall configures<br/>si el puerto existe en la red.</div>
+        </div>
+
+        <div class="card info">
+          <div class="tk-num neon-c">[✓] 02</div>
+          <div class="tk-title">Zero Trust no es un producto.</div>
+          <div class="tk-desc">Es una arquitectura. OpenZiti lo hace<br/>accesible y completamente open source.</div>
+        </div>
+
+        <div class="card danger">
+          <div class="tk-num neon-r">[✓] 03</div>
+          <div class="tk-title">El playbook asume visibilidad.</div>
+          <div class="tk-desc">Elimínala y el 90% de las técnicas<br/>ofensivas no aplica desde el primer paso.</div>
+        </div>
+
+        <div class="card warn">
+          <div class="tk-num neon-y">[✓] 04</div>
+          <div class="tk-title">Funciona con tu API actual.</div>
+          <div class="tk-desc">No necesitas reescribir código.<br/>Solo cambiar la arquitectura de red.</div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════ -->
+    <!-- SLIDE 16: FINAL / Q&A                                 -->
+    <!-- ══════════════════════════════════════════════════════ -->
+    <section class="title-slide" data-background-color="#0a0a0a">
+      <h1 class="type-in" style="font-size:1.1em;">¿Preguntas?<span class="cursor neon-g">_</span></h1>
+
+      <!-- git clone — único comando -->
+      <div class="terminal" style="font-size:0.52em; text-align:left; width:80%; margin:0.3em auto 0.7em;">
+        <div class="terminal-header">
+          <span class="term-title">clone &amp; play</span>
+        </div>
+        <span class="prompt">$</span> <span class="cmd">git clone https://github.com/SPS-Tech-is-now/hackgdl-dark-api</span><br/>
+        <span class="output">Cloning into 'hackgdl-dark-api'...</span><br/>
+        <span class="success">✓ done.</span>
+      </div>
+
+      <!-- QR codes: 5 en fila -->
+      <div style="display:flex; gap:1.4em; justify-content:center; align-items:flex-start;">
+        <a href="https://github.com/SPS-Tech-is-now/hackgdl-dark-api" target="_blank" style="text-decoration:none; text-align:center; display:block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&bgcolor=0a0a0a&color=00ff41&data=https://github.com/SPS-Tech-is-now/hackgdl-dark-api"
+               style="border:1px solid #1a3a1a; border-radius:4px; display:block;" width="96" height="96" alt="QR Repo"/>
+          <div style="font-size:0.3em; color:#555; margin-top:0.35em; letter-spacing:1px;">Github Repo</div>
+        </a>
+        <a href="https://github.com/OWASP/crAPI" target="_blank" style="text-decoration:none; text-align:center; display:block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&bgcolor=0a0a0a&color=00ff41&data=https://github.com/OWASP/crAPI"
+               style="border:1px solid #1a3a1a; border-radius:4px; display:block;" width="96" height="96" alt="QR crAPI"/>
+          <div style="font-size:0.3em; color:#555; margin-top:0.35em; letter-spacing:1px;">OWASP/crAPI</div>
+        </a>
+        <a href="https://openziti.io" target="_blank" style="text-decoration:none; text-align:center; display:block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&bgcolor=0a0a0a&color=00ff41&data=https://openziti.io"
+               style="border:1px solid #1a3a1a; border-radius:4px; display:block;" width="96" height="96" alt="QR OpenZiti"/>
+          <div style="font-size:0.3em; color:#555; margin-top:0.35em; letter-spacing:1px;">openziti.io</div>
+        </a>
+        <a href="https://netfoundry.io" target="_blank" style="text-decoration:none; text-align:center; display:block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&bgcolor=0a0a0a&color=00d4ff&data=https://netfoundry.io"
+               style="border:1px solid #0a1a2a; border-radius:4px; display:block;" width="96" height="96" alt="QR NetFoundry"/>
+          <div style="font-size:0.3em; color:#555; margin-top:0.35em; letter-spacing:1px;">netfoundry.io</div>
+        </a>
+        <a href="https://spsolutions.com.mx" target="_blank" style="text-decoration:none; text-align:center; display:block;">
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&bgcolor=0a0a0a&color=00d4ff&data=https://spsolutions.com.mx"
+               style="border:1px solid #0a1a2a; border-radius:4px; display:block;" width="96" height="96" alt="QR SPS"/>
+          <div style="font-size:0.3em; color:#555; margin-top:0.35em; letter-spacing:1px;">spsolutions.com.mx</div>
+        </a>
+      </div>
+
+      <!-- SPS logo -->
+      <div style="margin-top:0.8em;">
+        <a href="https://spsolutions.com.mx" target="_blank">
+          <img src="https://developers.spsolutions.com.mx/images/Logos/Logo-sps-text.webp"
+               alt="SPS" style="height:100px; opacity:0.35; filter:brightness(0) invert(1);"/>
+        </a>
+      </div>
+    </section>
+
+  </div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/highlight/highlight.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/plugin/notes/notes.js"></script>
+<script>
+  Reveal.initialize({
+    hash: true,
+    transition: 'fade',
+    transitionSpeed: 'fast',
+    backgroundTransition: 'fade',
+    controls: true,
+    progress: true,
+    center: true,
+    width: 1280,
+    height: 800,
+    margin: 0.04,
+    minScale: 0.1,
+    maxScale: 2.0,
+    plugins: [ RevealHighlight, RevealNotes ],
+    highlight: {
+      highlightOnLoad: true
+    },
+    keyboard: {
+      // 'b' para blanquear pantalla durante demos
+      66: 'togglePause'
+    }
+  });
+</script>
+</body>
+</html>

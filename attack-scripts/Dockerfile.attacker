@@ -1,0 +1,23 @@
+FROM kalilinux/kali-rolling
+
+RUN apt-get update -q && \
+    apt-get install -y --no-install-recommends \
+      nmap \
+      curl \
+      jq \
+      ffuf \
+      dnsutils \
+      netcat-openbsd \
+      openssl \
+      python3 \
+      python3-pip \
+      seclists \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /scripts
+COPY . /scripts/
+
+# El target interno es crapi-web:80 (mismo Docker network)
+ENV TARGET=http://crapi-web
+
+CMD ["/bin/bash"]

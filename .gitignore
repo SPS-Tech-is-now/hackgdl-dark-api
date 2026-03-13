@@ -1,0 +1,21 @@
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# Logs
+logs/
+*.log
+
+# Maven build output
+target/
+
+# Sensitive credentials / tokens
+#*.jwt
+*.env
+.env*
+secrets/
+
+# OS
+.DS_Store
+Thumbs.db   
